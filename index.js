@@ -37,7 +37,8 @@ const inquirerSearch = () => {
             choices: [
               'View all employees',
               'View all employees by role',
-              'View all employees by department'
+              'View all employees by department',
+              'Add a new department'
             ],
         })
         .then((answer) => {
@@ -50,6 +51,9 @@ const inquirerSearch = () => {
                     break
                 case 'View all employees by department':
                     departmentIDsearch()
+                    break
+                case 'Add a new department':
+                    addDepartment()
                     break
                 default:
                     console.log(`Invalid action: ${answer.action}`);
@@ -117,4 +121,29 @@ const departmentIDsearch = () => {
             }
             });
         })
+}
+
+const addDepartment = () => {
+    inquirer
+        .prompt(
+            {
+            name: 'depName',
+            type: 'input',
+            message: 'What is the name of the department you would like to add?',
+            },
+        )
+        .then((answer) => {
+            console.log(answer)
+            connection.query('INSERT INTO department SET ?',
+                {
+                name: answer.depName,
+                },
+                (err) => {
+                    if (err) throw err;
+                    console.log('Your department was created successfully!');
+                    // re-prompt the user for if they want to bid or post
+                  }
+            )
+        })
+
 }
