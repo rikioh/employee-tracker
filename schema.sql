@@ -11,6 +11,7 @@ primary key(department_id)
 
 Create table role(
 role_id int NOT NULL auto_increment,
+title varchar(30) not null,
 salary decimal NOT NULL,
 department_id int,
 primary key(role_id),

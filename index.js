@@ -39,7 +39,9 @@ const inquirerSearch = () => {
               'View all employees by role',
               'View all employees by department',
               'Add a new department',
-              'Add a new role'
+              'Add a new role',
+              'Add new employee',
+              'Delete an employee'
             ],
         })
         .then((answer) => {
@@ -59,6 +61,12 @@ const inquirerSearch = () => {
                 case 'Add a new role':
                     addRole()
                     break
+                case 'Add new employee':
+                    addEmployee()
+                    break
+                case 'Delete an employee':
+                    deleteEmployee()
+                    break
                 default:
                     console.log(`Invalid action: ${answer.action}`);
                     break;
@@ -71,6 +79,13 @@ const employeeIDsearch = () => {
     const query = 'SELECT * FROM employee';
       connection.query(query, (err, res) => {
         console.table(res)
+        inquirerSearch()
+        });
+}
+const employeeNameSearch = (callback) => {
+    const query = 'SELECT * FROM employee';
+      connection.query(query, (err, res) => {
+        callback(res)
         });
 }
 
@@ -86,6 +101,7 @@ const roleIDsearch = () => {
             const query = 'SELECT * FROM employee WHERE ?';
             connection.query(query, { role_id: answer.role }, (err, res) => {
             console.table(res)
+            inquirerSearch()
         });
     })
 }
@@ -119,6 +135,7 @@ const departmentIDsearch = () => {
                     count++
                     if(count==roles.length){
                         console.table(depEmployee)
+                        inquirerSearch()
                     }
                 })
 
@@ -145,10 +162,10 @@ const addDepartment = () => {
                 (err) => {
                     if (err) throw err;
                     console.log('Your department was created successfully!');
+                    inquirerSearch()
                   }
             )
         })
-
 }
 
 const addRole = () => {
@@ -181,7 +198,82 @@ const addRole = () => {
             (err) => {
                 if (err) throw err;
                 console.log('Your role was created successfully!');
+                inquirerSearch()
               }
         )
     })
 }
+
+const addEmployee = () => {
+    inquirer
+    .prompt([
+        {
+        name: 'firstName',
+        type: 'input',
+        message: 'What is the first name of the Employee you would like to add?'
+        },
+        {
+        name: 'lastName',
+        type: 'input',
+        message: 'What is the last name of the Employee you would like to add?'
+        },
+        {
+        name: 'roleID',
+        type: 'input',
+        message: 'What is the ID of the role the employee will be?'
+        }
+    ]
+    )
+    .then((answer) => {
+        connection.query('INSERT INTO employee SET ?',
+            {
+            first_name: answer.firstName,
+            last_name: answer.lastName,
+            role_id: answer.roleID,
+            },
+            (err) => {
+                if (err) throw err;
+                console.log('Your role was created successfully!');
+                inquirerSearch()
+              }
+        )
+    })
+}
+
+function deleteEmployeeQuery(search)
+{
+    const query = `DELETE FROM employee WHERE ?`
+    connection.query(query, {employee_id: search}, (err, res) =>
+    {
+        console.log(`The chosen employee has been removed.`);
+        inquirerSearch()
+    });
+}
+
+async function deletePrompt(employees)
+{
+    let answers = await inquirer.prompt([
+        {
+            type: "list",
+            name: "employee",
+            message: "Which employee do you wish to remove? You cannot remove an employee that is still the manager of another.",
+            choices: employees
+        }
+    ]);
+    return answers;
+}
+function deleteEmployee()
+{
+    employeeNameSearch(async result =>
+    {
+        let chosenEmployee = await deletePrompt(result.map(data => data.first_name + " " + data.last_name));
+        result.forEach(data =>
+        {
+            let splitName = chosenEmployee.employee.split(" ");
+            if (data.first_name == splitName[0] && data.last_name == splitName[1])
+                search=data.employee_id
+        });
+        deleteEmployeeQuery(search);
+    });
+}
+    
