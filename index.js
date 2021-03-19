@@ -38,7 +38,8 @@ const inquirerSearch = () => {
               'View all employees',
               'View all employees by role',
               'View all employees by department',
-              'Add a new department'
+              'Add a new department',
+              'Add a new role'
             ],
         })
         .then((answer) => {
@@ -54,6 +55,9 @@ const inquirerSearch = () => {
                     break
                 case 'Add a new department':
                     addDepartment()
+                    break
+                case 'Add a new role':
+                    addRole()
                     break
                 default:
                     console.log(`Invalid action: ${answer.action}`);
@@ -141,9 +145,43 @@ const addDepartment = () => {
                 (err) => {
                     if (err) throw err;
                     console.log('Your department was created successfully!');
-                    // re-prompt the user for if they want to bid or post
                   }
             )
         })
 
+}
+
+const addRole = () => {
+    inquirer
+    .prompt([
+        {
+        name: 'roleName',
+        type: 'input',
+        message: 'What is the title of the Role you would like to add?'
+        },
+        {
+        name: 'salary',
+        type: 'input',
+        message: 'What is the salary ($/hr) of the Role you would like to add?'
+        },
+        {
+        name: 'departmentID',
+        type: 'input',
+        message: 'What is the ID of the department the role is under?'
+        }
+    ]
+    )
+    .then((answer) => {
+        connection.query('INSERT INTO role SET ?',
+            {
+            title: answer.roleName,
+            salary: answer.salary,
+            department_id: answer.departmentID
+            },
+            (err) => {
+                if (err) throw err;
+                console.log('Your role was created successfully!');
+              }
+        )
+    })
 }
