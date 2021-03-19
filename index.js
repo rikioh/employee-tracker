@@ -1,12 +1,7 @@
 const inquirer = require('inquirer');
 const mysql = require('mysql');
-const sequelize = require('./config/connection');
 const cTable = require('console.table');
 
-// sequelize.sync().then(() => {
-//     console.log('Now listening')
-//     inquirerSearch()
-//   });
 
 const connection = mysql.createConnection({
     host: 'localhost',
@@ -41,7 +36,9 @@ const inquirerSearch = () => {
               'Add a new department',
               'Add a new role',
               'Add new employee',
-              'Delete an employee'
+              'Update Employee Role',
+              'Delete an employee',
+              'End Program'
             ],
         })
         .then((answer) => {
@@ -64,8 +61,14 @@ const inquirerSearch = () => {
                 case 'Add new employee':
                     addEmployee()
                     break
+                case 'Update Employee Role':
+                    updateRole()
+                    break
                 case 'Delete an employee':
                     deleteEmployee()
+                    break
+                case 'End Program':
+                    connectionEnd()
                     break
                 default:
                     console.log(`Invalid action: ${answer.action}`);
@@ -74,8 +77,12 @@ const inquirerSearch = () => {
         })
 }
 
+const connectionEnd = () =>{
+    console.log("Thank you for using the program")
+    connection.end();
+}
+
 const employeeIDsearch = () => {
-    console.log("employee id search")
     const query = 'SELECT * FROM employee';
       connection.query(query, (err, res) => {
         console.table(res)
@@ -89,12 +96,19 @@ const employeeNameSearch = (callback) => {
         });
 }
 
+const roleSearch = (callback) => {
+    const query = 'SELECT * FROM role';
+      connection.query(query, (err, res) => {
+        callback(res)
+        });
+}
+
 const roleIDsearch = () => {
     inquirer
         .prompt({
             name: 'role',
             type: 'input',
-            message: 'What role would you like to search for?',
+            message: 'What role would you like to search for? (enter role id number)',
         })
         .then((answer) => {
             console.log("role id search")
@@ -111,7 +125,7 @@ const departmentIDsearch = () => {
         .prompt({
             name: 'department',
             type: 'input',
-            message: 'What department would you like to search for?',
+            message: 'What department would you like to search for? (enter department id number)',
         })
         .then((answer) => {
             console.log("department id search")
@@ -154,7 +168,6 @@ const addDepartment = () => {
             },
         )
         .then((answer) => {
-            console.log(answer)
             connection.query('INSERT INTO department SET ?',
                 {
                 name: answer.depName,
@@ -256,7 +269,7 @@ async function deletePrompt(employees)
         {
             type: "list",
             name: "employee",
-            message: "Which employee do you wish to remove? You cannot remove an employee that is still the manager of another.",
+            message: "Which employee do you wish to remove?",
             choices: employees
         }
     ]);
@@ -266,7 +279,7 @@ function deleteEmployee()
 {
     employeeNameSearch(async result =>
     {
-        let chosenEmployee = await deletePrompt(result.map(data => data.first_name + " " + data.last_name));
+        let chosenEmployee = await deletePrompt(result.map(data => `${data.first_name} ${data.last_name}`));
         result.forEach(data =>
         {
             let splitName = chosenEmployee.employee.split(" ");
@@ -277,3 +290,53 @@ function deleteEmployee()
     });
 }
     
+function updateRoleQuery(employee_id, role_id)
+{
+    const query = `UPDATE employee
+    SET role_id = ?
+    WHERE employee_id = ?;`
+    connection.query(query, [role_id, employee_id], (err, res) =>
+    {
+        console.log(`The chosen employee role has been updated.`);
+        inquirerSearch()
+    });
+}
+
+async function updatePrompt(employees, role)
+    {
+        let answers = await inquirer.prompt([
+            {
+                type: "list",
+                name: "employee",
+                message: "Which employee do you wish to update their role?",
+                choices: employees
+            },
+            {
+                type: "list",
+                name: "role",
+                message: "Enter the role_id you wish to change the employee to",
+                choices: role
+            }
+        ]);
+        return answers;
+    }
+
+function updateRole()
+{
+    employeeNameSearch(async employees =>
+    {
+        roleSearch(async role =>
+        {
+            let answers = await updatePrompt(employees.map(data => `${data.first_name} ${data.last_name}`), role.map(data => data.title));
+            let role_id = role.find(data => data.title === answers.role).role_id
+            let employee_id;
+            employees.forEach(data =>
+            {
+                let names = answers.employee.split(" ");
+                if (data.first_name == names[0] && data.last_name == names[1])
+                    employee_id = data.employee_id;
+            });
+            updateRoleQuery(employee_id, role_id);
+        });
+    });
+}
